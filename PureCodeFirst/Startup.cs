@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
@@ -5,9 +7,11 @@ using Microsoft.Extensions.Hosting;
 using HotChocolate;
 using HotChocolate.AspNetCore;
 using HotChocolate.AspNetCore.Playground;
+using HotChocolate.Server;
 using HotChocolate.Subscriptions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Net.Http.Headers;
 using StarWars.Characters;
 using StarWars.Repositories;
 using StarWars.Reviews;
@@ -23,6 +27,26 @@ namespace StarWars
             // Add the custom services like repositories etc ...
             services.AddSingleton<ICharacterRepository, CharacterRepository>();
             services.AddSingleton<IReviewRepository, ReviewRepository>();
+            services.AddSingleton<JwtAuthenticator>();
+            services.AddWebSocketConnectionInterceptor(async (ctx, props, ct) =>
+            {
+                var tokenValue = props.GetValueOrDefault(HeaderNames.Authorization);
+                if (!(tokenValue is string token))
+                {
+                    return ConnectionStatus.Reject();
+                }
+                var authenticator = ctx.RequestServices.GetRequiredService<JwtAuthenticator>();
+                try
+                {
+                    var principal = await authenticator.Authenticate(token, ctx.RequestAborted);
+                    ctx.User = principal;
+                    return ConnectionStatus.Accept();
+                }
+                catch (Exception e)
+                {
+                    return ConnectionStatus.Reject(e.Message);
+                }
+            });
             services
                 .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
