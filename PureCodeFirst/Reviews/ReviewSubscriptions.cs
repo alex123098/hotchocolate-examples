@@ -1,4 +1,5 @@
 ﻿using HotChocolate;
+using HotChocolate.AspNetCore.Authorization;
 using HotChocolate.Subscriptions;
 using HotChocolate.Types;
 using StarWars.Characters;
@@ -9,6 +10,7 @@ namespace StarWars.Reviews
     [ExtendObjectType(Name = "Subscription")]
     public class ReviewSubscriptions
     {
+        [Authorize]
         public Review OnReview(
             Episode episode, 
             IEventMessage message, 

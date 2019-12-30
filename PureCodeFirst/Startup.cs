@@ -4,7 +4,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using HotChocolate;
 using HotChocolate.AspNetCore;
+using HotChocolate.AspNetCore.Playground;
 using HotChocolate.Subscriptions;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using StarWars.Characters;
 using StarWars.Repositories;
 using StarWars.Reviews;
@@ -20,12 +23,35 @@ namespace StarWars
             // Add the custom services like repositories etc ...
             services.AddSingleton<ICharacterRepository, CharacterRepository>();
             services.AddSingleton<IReviewRepository, ReviewRepository>();
+            services
+                .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(options =>
+                {
+                    options.Authority = "authority here";
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = true,
 
+                        ValidIssuers = new []
+                        {
+                            "valid issuer here",
+                        },
+                        ValidAudiences = new[]
+                        {
+                            "audience here"
+                        },
+                    };
+                });
+                
             // Add in-memory event provider
             services.AddInMemorySubscriptionProvider();
 
             // Add GraphQL Services
             services.AddGraphQL(sp => SchemaBuilder.New()
+                .AddAuthorizeDirectiveType()
                 .AddServices(sp)
                 .AddQueryType(d => d.Name("Query"))
                 .AddMutationType(d => d.Name("Mutation"))
@@ -49,8 +75,16 @@ namespace StarWars
 
             app
                 .UseRouting()
+                .UseAuthentication()
                 .UseWebSockets()
-                .UseGraphQL("/graphql");
+                .UseGraphQL("/graphql")
+                .UsePlayground(new PlaygroundOptions
+                {
+                    Path = "/playground",
+                    QueryPath = "/graphql",
+                    EnableSubscription = true,
+                    SubscriptionPath = "/graphql"
+                });
         }
     }
 }

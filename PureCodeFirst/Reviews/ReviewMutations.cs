@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using HotChocolate;
+using HotChocolate.AspNetCore.Authorization;
 using HotChocolate.Subscriptions;
 using HotChocolate.Types;
 using StarWars.Repositories;
@@ -12,6 +13,7 @@ namespace StarWars.Reviews
         /// <summary>
         /// Creates a review for a given Star Wars episode.
         /// </summary>
+        [Authorize]
         public async Task<CreateReviewPayload> CreateReview(
             CreateReviewInput input,
             [Service]IReviewRepository repository,
